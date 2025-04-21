@@ -1,4 +1,4 @@
-# Flashcard System Implementation Checklist
+# Flashcard System: Implementation Checklist
 
 ## Phase 1: Project Setup and Infrastructure
 
@@ -14,7 +14,14 @@
   - [ ] hint (text)
   - [ ] difficulty_level (text, default 'medium')
   - [ ] created_date (timestamp with timezone, default now())
-- [ ] Set up Row Level Security (RLS) if needed
+  - [ ] bucket (integer, default 0)
+- [ ] Create "practice_records" table with schema:
+  - [ ] id (UUID, auto-generated)
+  - [ ] card_id (UUID, foreign key to flashcards)
+  - [ ] card_front (text)
+  - [ ] card_back (text)
+  - [ ] difficulty (integer)
+  - [ ] practice_date (timestamp with timezone, default now())
 - [ ] Test connection with API key
 
 ### Chrome Extension Scaffold
@@ -55,7 +62,7 @@
   - [ ] Create `.env` file
   - [ ] Add Supabase URL and API key
   - [ ] Add to `.gitignore`
-- [ ] Create basic app layout and routing
+- [ ] Create basic app layout
 - [ ] Test basic app runs
 
 ## Phase 2: Chrome Extension Development
@@ -114,15 +121,30 @@
 
 ## Phase 3: Web Application Development
 
+### Leitner System Integration
+
+- [ ] Transfer existing functions from paste.txt
+  - [ ] toBucketSets
+  - [ ] practice
+  - [ ] update
+  - [ ] getHint
+  - [ ] computeProgress
+- [ ] Create interfaces for Flashcard and other types
+- [ ] Create utility for converting Supabase data to Flashcard objects
+- [ ] Create utility for converting practice records to history array
+- [ ] Connect Leitner functions to React component state
+- [ ] Test Leitner system with sample data
+
 ### Supabase Integration (Web App)
 
 - [ ] Create supabase.js client configuration
 - [ ] Set up environment variables
 - [ ] Create fetchFlashcards function
 - [ ] Create updateFlashcard function
+- [ ] Create savePracticeRecord function
 - [ ] Add error handling for database operations
 - [ ] Create custom hook for flashcard data
-- [ ] Implement data transformation utilities
+- [ ] Create custom hook for practice history
 - [ ] Test database connection and operations
 
 ### Flashcard Display Component
@@ -165,7 +187,11 @@
   - [ ] Medium button (✋)
   - [ ] Hard button (👎)
 - [ ] Style rating buttons
-- [ ] Connect buttons to updateFlashcard function
+- [ ] Connect buttons to update function
+- [ ] Add Leitner system integration
+  - [ ] Map ratings to AnswerDifficulty enum
+  - [ ] Update buckets based on rating
+  - [ ] Save practice record to database
 - [ ] Show current difficulty level on card
 - [ ] Add loading state during update
 - [ ] Show success/error feedback
@@ -220,7 +246,7 @@
 - [ ] Connect gesture recognition to rating system
 - [ ] Create GestureRatingController
 - [ ] Implement visual feedback for detected gestures
-- [ ] Connect confirmed gestures to rating submission
+- [ ] Connect confirmed gestures to Leitner update function
 - [ ] Handle rating conflicts (manual vs gesture)
 - [ ] Add user preferences for gesture sensitivity
 - [ ] Test end-to-end gesture rating flow
@@ -279,7 +305,7 @@
 - [ ] Create onboarding hints for first use
 - [ ] Final browser compatibility check
 
-## Packaging and Documentation
+## Phase 6: Packaging and Documentation
 
 ### Chrome Extension Packaging
 
@@ -287,7 +313,6 @@
 - [ ] Create promotional images
   - [ ] Store listing icon
   - [ ] Screenshots
-- [ ] Write short and detailed descriptions
 - [ ] Remove debug code and console logs
 - [ ] Package as ZIP file
 - [ ] Test installation from package
@@ -300,7 +325,6 @@
 - [ ] Test built application
 - [ ] Create simple serve script
 - [ ] Document build and run process
-- [ ] Create desktop wrapper (optional)
 
 ### User Documentation
 
