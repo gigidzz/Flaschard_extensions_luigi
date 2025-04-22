@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Flashcard Extention",
+  "version": "1.0",
+  "description": "Create flashcards from highlighted text with gesture recognition",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "contextMenus"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "flashcards saver",
+    "default_icon": {
+      "16": "images/ext-icon.png",
+      "48": "images/ext-icon.png",
+      "128": "images/ext-icon.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "images/ext-icon.png"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "host_permissions": [
+    "http://localhost:3000/*"
+  ]
+}
