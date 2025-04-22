@@ -2,8 +2,9 @@ export class Flashcard {
     constructor(
       readonly front: string,
       readonly back: string,
+      readonly tags: ReadonlyArray<string> = [],
       readonly hint?: string,
-      readonly tags: ReadonlyArray<string> = []
+      readonly id?: string,
     ) {}
   }
   
