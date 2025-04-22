@@ -1,17 +1,29 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === 'saveFlashcard') {
     console.log('Flashcard received in background.js:', request.flashcard);
-
+    
+    const transformedFlashcard = {
+      front: request.flashcard.title,
+      back: request.flashcard.content,
+      hint: request.flashcard.hint,
+      tags: request.flashcard.tags || []
+    };
+    
+    console.log('Sending transformed flashcard to server:', transformedFlashcard);
+    
     fetch('http://localhost:3000/api/flashcards', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(request.flashcard)
+      body: JSON.stringify(transformedFlashcard)
     })
     .then(response => {
+      console.log('Response from server:', response);
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        return response.json().then(errorData => {
+          throw new Error(errorData.error || 'Network response was not ok');
+        });
       }
       return response.json();
     })
