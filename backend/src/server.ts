@@ -6,11 +6,11 @@ import { ApiResponse, CreateFlashcardRequest } from "./types/req-res-types";
 
 //express აპის შექმნა 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT;
 
-//მხოლოდ localhost:3000-დან რომ მიიღოს რექუესთები
+//მხოლოდ localhost:3001-დან რომ მიიღოს რექუესთები
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: 'http://localhost:3001',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
