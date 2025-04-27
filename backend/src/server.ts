@@ -8,29 +8,32 @@ import { Flashcard } from "./logic/flashcard";
 import { ApiResponse, CreateFlashcardRequest } from "./types/req-res-types";
 
 
-//express აპის შექმნა 
+// Create Express app instance
 const app = express();
 const PORT = process.env.PORT;
 
-//მხოლოდ localhost:3001-დან რომ მიიღოს რექუესთები
+// Enable Cross-Origin Resource Sharing (CORS) for localhost:3001
 app.use(cors({
-  origin: 'http://localhost:3001',
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+  origin: 'http://localhost:3001', // Allow only this origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Supported methods
+  credentials: true // Allow cookies to be sent
 }));
 app.use(express.json());
 
-// ყველა flashcard ის დაfetchვა
+/**
+ * Fetch all flashcards from Supabase
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables.
+ */
 app.get('/api/flashcards', async (req: Request, res: Response<ApiResponse<Flashcard[]>>) => {
   try {
-    //სუპაბაზიდან დათის ამოღება
+    // Fetch data from Supabase
     const { data, error } = await supabase
       .from('flashcards')
       .select('*');
     
     if (error) throw error;
 
-    //დათაბაზიდან მირებული ინფორმაციის flashcard-ებად დამაპვა
+    // Map Supabase data to Flashcard class instances
     const flashcards = data.map(card => 
       new Flashcard(
         card.front, 
@@ -41,16 +44,18 @@ app.get('/api/flashcards', async (req: Request, res: Response<ApiResponse<Flashc
       )
     );
 
-    //რესფონსის გაგზავნა
+    // Send the response with status 200 and the fetched flashcards
     res.status(200).json({ success: true, data: flashcards });
   } catch (error: any) {
-    //if error send შესაბამისი error
+    // Catch errors and send a 500 error response
     console.error('Error fetching flashcards:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch flashcards' });
   }
 });
 
-//თაგის მიხედვით flashcard-ების მიღება
+/**
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables.
+ */
 app.get('/api/flashcards/tag/:tag', async (
   req: Request<{ tag: string }>, 
   res: Response<ApiResponse<Flashcard[]>>
@@ -88,7 +93,7 @@ app.get('/api/flashcards/tag/:tag', async (
   }
 });
 
-//ახალი flashcard-ის შექმნა
+// Create a new flashcard
 app.post('/api/flashcards', async (
   req: Request<{}, {}, CreateFlashcardRequest>, 
   res: Response<ApiResponse<any>>
