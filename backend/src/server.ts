@@ -1,8 +1,12 @@
+import * as dotenv from 'dotenv';
+dotenv.config({path: '.env.test'});
+
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { supabase } from "./utils/supabase";
 import { Flashcard } from "./logic/flashcard";
 import { ApiResponse, CreateFlashcardRequest } from "./types/req-res-types";
+
 
 //express აპის შექმნა 
 const app = express();
@@ -155,6 +159,10 @@ app.delete('/api/flashcards/:id', async (
 
 
 //our app should listen port so we can get requests
-app.listen(PORT, () => {
-  console.log(`Backend server running at http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Backend server running at http://localhost:${PORT}`);
+  });
+}
+
+export { app };
