@@ -6,6 +6,11 @@ import { Flashcard } from '../types/flashcard';
 const FlashcardList: React.FC = () => {
   const { data: flashcards = [], isLoading, error, refetch } = useFlashcards();
 
+  function goToPractice(e: any) {
+    e.preventDefault();
+    console.log('go to practice')
+  }
+
   if (isLoading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -16,18 +21,10 @@ const FlashcardList: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: 'red' }}>
+      <div>
         <p>Error loading flashcards</p>
         <button 
           onClick={() => refetch()}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#4a6fa5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
         >
           Try Again
         </button>
@@ -37,7 +34,7 @@ const FlashcardList: React.FC = () => {
 
   if (flashcards.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
+      <div>
         <p>No flashcards found</p>
       </div>
     );
@@ -45,29 +42,16 @@ const FlashcardList: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>Flashcards</h2>
+      <div className='flex justify-between'>
+        <h2 className='text-4xl'>Flashcards</h2>
         <button 
-          onClick={() => refetch()}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#4a6fa5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          onClick={(e) => goToPractice(e)}
+          className='bg-blue-500 hover:bg-blue-700 text-black font-bold py-2 px-4 rounded'
         >
-          Refresh
+          go to practice
         </button>
       </div>
-      <div 
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-        }}
-      >
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>
         {flashcards.map((flashcard: Flashcard) => (
           <FlashcardItem key={flashcard.id} flashcard={flashcard} />
         ))}

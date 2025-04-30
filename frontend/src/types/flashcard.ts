@@ -4,6 +4,7 @@ export interface Flashcard {
     back: string;
     tags: string[];
     hint?: string;
+    point: number;
   }
   
   export interface ApiResponse<T> {
