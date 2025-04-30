@@ -5,6 +5,7 @@ export class Flashcard {
       readonly tags: ReadonlyArray<string> = [],
       readonly hint?: string,
       readonly id?: string,
+      readonly point?: number
     ) {}
   }
   
