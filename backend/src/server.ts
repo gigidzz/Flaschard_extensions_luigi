@@ -8,11 +8,18 @@ import { Flashcard } from "./logic/flashcard";
 import { ApiResponse, CreateFlashcardRequest } from "./types/req-res-types";
 
 
-// Create Express app instance
+/**
+ * Express application instance
+ * @type {express.Application}
+ */
 const app = express();
 const PORT = process.env.PORT;
 
-// Enable Cross-Origin Resource Sharing (CORS) for localhost:3001
+/**
+ * Configure CORS for the application
+ * @spec.requires Environment with proper CORS policies
+ * @spec.ensures Only localhost:3001 can access the API with specified methods
+ */
 app.use(cors({
   origin: 'http://localhost:3001', // Allow only this origin
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Supported methods
@@ -21,8 +28,13 @@ app.use(cors({
 app.use(express.json());
 
 /**
- * Fetch all flashcards from Supabase
- * @spec.requires The server must be running and connected to Supabase with valid environment variables.
+ * Fetch all flashcards from the database
+ * 
+ * @route GET /api/flashcards
+ * @returns {Promise<ApiResponse<Flashcard[]>>} Array of flashcard objects with success status
+ * @throws {Error} If database connection fails or query execution fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.ensures Returns all flashcards from the database as Flashcard instances
  */
 app.get('/api/flashcards', async (req: Request, res: Response<ApiResponse<Flashcard[]>>) => {
   try {
@@ -54,18 +66,24 @@ app.get('/api/flashcards', async (req: Request, res: Response<ApiResponse<Flashc
 });
 
 /**
- * @spec.requires The server must be running and connected to Supabase with valid environment variables.
+ * Fetch flashcards filtered by tag
+ * 
+ * @route GET /api/flashcards/tag/:tag
+ * @param {string} req.params.tag - The tag to filter flashcards by
+ * @returns {Promise<ApiResponse<Flashcard[]>>} Array of matching flashcard objects with success status
+ * @throws {Error} If database connection fails or query execution fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.ensures Returns all flashcards that contain the specified tag
  */
 app.get('/api/flashcards/tag/:tag', async (
   req: Request<{ tag: string }>, 
   res: Response<ApiResponse<Flashcard[]>>
 ) => {
   try {
-    //თაგს url-ში ვატან და ამიტომ ესე უნდა ამოვიღო
+    //Get the tag from URL parameters
     const tag: string = req.params.tag;
     
-    //სუპაბაზიდან დათის ამოღება თაგის მიხედვით და რადგან tags array-ია 
-    // ამიტომ ამ ფუნქციით ვნახულობთ შეიცავს თუ არა ამ კონკრეტულ თაგს
+    //Query Supabase for flashcards containing the specified tag
     const { data, error } = await supabase
       .from('flashcards')
       .select('*')
@@ -73,7 +91,7 @@ app.get('/api/flashcards/tag/:tag', async (
     
     if (error) throw error;
     
-    //დათაბაზიდან მირებული ინფორმაციის flashcard-ებად დამაპვა
+    //Map database results to Flashcard instances
     const flashcards = data.map(card => 
       new Flashcard(
         card.front, 
@@ -84,32 +102,46 @@ app.get('/api/flashcards/tag/:tag', async (
       )
     );
 
-    //რესპონსის გაგზავნა
+    //Send response
     res.status(200).json({ success: true, data: flashcards });
   } catch (error: any) {
-    //if error send შესაბამისი error
+    //Handle and log errors
     console.error('Error fetching flashcards by tag:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch flashcards by tag' });
   }
 });
 
-// Create a new flashcard
+/**
+ * Create a new flashcard in the database
+ * 
+ * @route POST /api/flashcards
+ * @param {CreateFlashcardRequest} req.body - The flashcard data to create
+ * @param {string} req.body.front - The front text of the flashcard
+ * @param {string} req.body.back - The back text of the flashcard (required)
+ * @param {string} [req.body.hint] - Optional hint for the flashcard
+ * @param {string[]} [req.body.tags] - Optional array of tags for categorizing the flashcard
+ * @returns {Promise<ApiResponse<Flashcard>>} Created flashcard with success status
+ * @throws {Error} If validation fails or database operations fail
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.requires The request body must contain at least the 'back' field
+ * @spec.ensures A new flashcard is created in the database with the provided data
+ */
 app.post('/api/flashcards', async (
   req: Request<{}, {}, CreateFlashcardRequest>, 
   res: Response<ApiResponse<any>>
 ): Promise<any> => {
   try {
-    //get flashcard attributes from request body
+    //Extract flashcard attributes from request body
     const { front, back, hint, tags }: CreateFlashcardRequest = req.body;
     
-    //if there is no back we return error as back is required
+    //Validate required fields
     if (!back) {
       return res.status(400).json({ success: false, error: 'back of flashcard are required' });
     }
 
-    const newFlashCard: Flashcard = { front, back, hint, tags:tags || [] }
+    const newFlashCard: Flashcard = { front, back, hint, tags: tags || [] }
     
-    //insertion in supabase database
+    //Insert into Supabase database
     const { data, error } = await supabase
       .from('flashcards')
       .insert([
@@ -119,30 +151,39 @@ app.post('/api/flashcards', async (
     
     if (error) throw error;
     
-    //send response and sent addedflashcard
+    //Send success response with the created flashcard
     res.status(201).json({ 
       success: true, 
       message: 'Flashcard created successfully', 
       data: data[0]
     });
   } catch (error: any) {
-    //if error send შესაბამისი error
+    //Handle and log errors
     console.error('Error creating flashcard:', error);
     res.status(500).json({ success: false, error: 'Failed to create flashcard' });
   }
 });
 
-
-// Delete a flashcard
+/**
+ * Delete a flashcard by its ID
+ * 
+ * @route DELETE /api/flashcards/:id
+ * @param {string} req.params.id - The ID of the flashcard to delete
+ * @returns {Promise<ApiResponse<void>>} Success message with no data
+ * @throws {Error} If database connection fails or delete operation fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.requires The ID parameter must correspond to an existing flashcard
+ * @spec.ensures The specified flashcard is removed from the database if it exists
+ */
 app.delete('/api/flashcards/:id', async (
   req: Request<{ id: string }>, 
   res: Response<ApiResponse<void>>
 ) => {
   try {
-    //get id from params
+    //Extract ID from URL parameters
     const { id } = req.params;
     
-    //run deletion function
+    //Execute deletion in database
     const { error } = await supabase
       .from('flashcards')
       .delete()
@@ -150,20 +191,24 @@ app.delete('/api/flashcards/:id', async (
     
     if (error) throw error;
     
-    //send response
+    //Send success response
     res.status(200).json({ 
       success: true, 
       message: 'Flashcard deleted successfully' 
     });
   } catch (error: any) {
-    //if error send შესაბამისი error
+    //Handle and log errors
     console.error('Error deleting flashcard:', error);
     res.status(500).json({ success: false, error: 'Failed to delete flashcard' });
   }
 });
 
-
-//our app should listen port so we can get requests
+/**
+ * Start the Express server if this file is run directly
+ * 
+ * @spec.requires Valid PORT environment variable must be set
+ * @spec.ensures Server listens on the specified port and logs a startup message
+ */
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Backend server running at http://localhost:${PORT}`);
