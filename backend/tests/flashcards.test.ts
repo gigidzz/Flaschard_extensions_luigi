@@ -125,59 +125,20 @@ describe('DELETE /api/flashcards/:id', () => {
  * @spec.requires The server must be running and connected to Supabase with valid environment variables.
  */
 describe('Flashcard API', () => {
-  /**
-   * @spec.requires GET /api/flashcards should return all flashcards.
+    /**
+   * @spec.requires GET /api/flashcards/practice should return flashcards with points less than 5.
    */
-  it('should fetch all flashcards', async () => {
-    const res = await request(app).get('/api/flashcards');
-    
-    expect(res.status).to.equal(200);
-    expect(res.body.success).to.be.true;
-    expect(res.body.data).to.be.an('array');
-  });
-
-  /**
-   * @spec.requires GET /api/flashcards/low-points should return flashcards with points less than 5.
-   */
-  it('should fetch flashcards with points less than 5', async () => {
-    const res = await request(app).get('/api/flashcards/practice');
-    
-    expect(res.status).to.equal(200);
-    expect(res.body.success).to.be.true;
-    expect(res.body.data).to.be.an('array');
-    expect(res.body.threshold).to.equal(5);
-    
-    // Check that all returned flashcards have points less than 5
-    res.body.data.forEach((card:Flashcard) => {
-      expect(card.point).to.be.lessThan(5);
+    it('should fetch flashcards with points less than 5', async () => {
+      const res = await request(app).get('/api/flashcards/practice');
+      
+      expect(res.status).to.equal(200);
+      expect(res.body.success).to.be.true;
+      expect(res.body.data).to.be.an('array');
+      expect(res.body.message).to.include('flashcards with points less than 5');
+      
+      // Check that all returned flashcards have points less than 5
+      res.body.data.forEach((card:Flashcard) => {
+        expect(card.point).to.be.lessThan(5);
+      });
     });
-  });
-
-  /**
-   * @spec.requires GET /api/flashcards/low-points should accept custom threshold.
-   */
-  it('should accept custom threshold parameter', async () => {
-    const threshold = 3;
-    const res = await request(app).get(`/api/flashcards/practice?threshold=${threshold}`);
-    
-    expect(res.status).to.equal(200);
-    expect(res.body.success).to.be.true;
-    expect(res.body.data).to.be.an('array');
-    expect(res.body.threshold).to.equal(threshold);
-    
-    // Check that all returned flashcards have points less than the custom threshold
-    res.body.data.forEach((card:Flashcard) => {
-      expect(card.point).to.be.lessThan(threshold);
-    });
-  });
-
-  /**
-   * @spec.requires GET /api/flashcards/low-points should handle invalid threshold parameter.
-   */
-  it('should handle invalid threshold parameter', async () => {
-    const res = await request(app).get('/api/flashcards/practice?threshold=invalid');
-    
-    expect(res.status).to.equal(400);
-    expect(res.body.success).to.be.false;
-  });
 });

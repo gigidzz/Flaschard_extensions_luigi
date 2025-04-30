@@ -204,6 +204,60 @@ app.delete('/api/flashcards/:id', async (
 });
 
 /**
+ * Fetch flashcards with points less than 5
+ * 
+ * @route GET /api/flashcards/practice
+ * @returns {ApiResponse<Flashcard[]>} Array of flashcard objects with points below 5
+ * @throws {Error} If database connection fails or query execution fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.ensures Returns only flashcards with points less than 5
+ * @spec.ensures Flashcards without points defined will be excluded from results
+ */
+app.get('/api/flashcards/practice', async (req: Request, res: Response<ApiResponse<Flashcard[]>>) => {
+  try {
+    // Define the point threshold
+    const pointThreshold = 5;
+
+    // Fetch data from Supabase with point filter
+    const { data, error } = await supabase
+      .from('flashcards')
+      .select('*')
+      .lt('point', pointThreshold)  // Filter for points less than 5
+      .not('point', 'is', null); // Exclude cards with null points
+      
+    if (error) throw error;
+    
+    // Map Supabase data to Flashcard class instances
+    const flashcards = data.map(card =>
+      new Flashcard(
+        card.front,
+        card.back,
+        card.tags || [],
+        card.hint,
+        card.id,
+        card.point
+      )
+    );
+    
+    // Send the response with status 200 and the fetched flashcards
+    res.status(200).json({ 
+      success: true, 
+      data: flashcards,
+      message: `Retrieved ${flashcards.length} flashcards with points less than 5`
+    });
+  } catch (error: any) {
+    // Catch errors and send a 500 error response
+    console.error('Error fetching low-point flashcards:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch low-point flashcards',
+      message: error.message || 'An unexpected error occurred'
+    });
+  }
+});
+
+
+/**
  * Start the Express server if this file is run directly
  * 
  * @spec.requires Valid PORT environment variable must be set
