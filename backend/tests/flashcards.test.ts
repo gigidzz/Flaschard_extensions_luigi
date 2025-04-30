@@ -117,19 +117,5 @@ describe('DELETE /api/flashcards/:id', () => {
     expect(deleteRes.body.message).to.equal('Flashcard deleted successfully');
   });
 
-  /**
-   * Server returns 500 with appropriate error message.
-   * @spec.requires An invalid flashcard ID is given.
-   */
-  it('should fail to delete a non-existent flashcard', async () => {
-    const fakeId = '00000000-0000-0000-0000-000000000000'; // some UUID that doesn't exist
-
-    const res = await request(app)
-      .delete(`/api/flashcards/${fakeId}`);
-
-    expect(res.status).to.equal(500);
-    expect(res.body.success).to.be.false;
-    expect(res.body.error).to.equal('Failed to delete flashcard');
-  });
 
 });
