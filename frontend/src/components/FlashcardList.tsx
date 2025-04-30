@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFlashcards } from '../hooks/useFlascards';
-import FlashcardItem from './flashcardItem';
+import FlashcardItem from './FlashcardItem';
 import { Flashcard } from '../types/flashcard';
 
 const FlashcardList: React.FC = () => {
