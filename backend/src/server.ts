@@ -23,7 +23,7 @@ const PORT = process.env.PORT;
  */
 app.use(cors({
   origin: 'http://localhost:3001', // Allow only this origin
-  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Supported methods
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'], // Supported methods
   credentials: true // Allow cookies to be sent
 }));
 app.use(express.json());
@@ -320,6 +320,8 @@ app.patch(
     res: Response<ApiResponse<Flashcard>>
   ) => {
     const { id, difficulty_level } = req.body;
+
+    console.log(id, difficulty_level)
 
     const difficultyToPoint: Record<DifficultyLevel, number> = {
       easy: 2,

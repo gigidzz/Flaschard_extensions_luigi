@@ -8,17 +8,19 @@ function PracticePage() {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [showNextButton, setShowNextButton] = useState(false);
   const [isCurrentCardRated, setIsCurrentCardRated] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [cardKey, setCardKey] = useState(0); // Use a key to force complete remount of FlashcardItem
   const { data: flashcards = [], isLoading, error, refetch } = usePracticeFlashcards();
 
   const handleRateCard = async (rating: 'wrong' | 'hard' | 'easy'): Promise<boolean> => {
     if (flashcards.length > 0) {
       const currentCard = flashcards[currentCardIndex];
-      
+      console.log(currentCard.id, rating, 'ratingrating')
       try {
         // Send rating to backend
-        const response = await axios.post('/api/flashcards/rate', {
-          flashcardId: currentCard.id,
-          rating: rating
+        const response = await axios.patch(`${import.meta.env.VITE_API_URL}/api/flashcards/update-difficulty`, {
+          id: currentCard.id,
+          difficulty_level: rating
         });
         
         // Only mark as rated and show next button if API call was successful
@@ -41,9 +43,24 @@ function PracticePage() {
 
   const handleNextCard = () => {
     if (currentCardIndex < flashcards.length - 1) {
-      setCurrentCardIndex(currentCardIndex + 1);
-      setShowNextButton(false);
-      setIsCurrentCardRated(false);
+      // Start transition with fade-out effect
+      setIsTransitioning(true);
+      
+      // Change card after fade-out (300ms)
+      setTimeout(() => {
+        // Move to next card and reset states
+        setCurrentCardIndex(currentCardIndex + 1);
+        setShowNextButton(false);
+        setIsCurrentCardRated(false);
+        
+        // Change the key to force full remount of component
+        setCardKey(prevKey => prevKey + 1);
+        
+        // End transition with fade-in effect after a short delay
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 50);
+      }, 300);
     } else {
       // Practice session completed
       alert("You've completed all flashcards!");
@@ -59,6 +76,7 @@ function PracticePage() {
     setCurrentCardIndex(0);
     setShowNextButton(false);
     setIsCurrentCardRated(false);
+    setCardKey(prevKey => prevKey + 1); // Force remount on start
   };
 
   if (isLoading) return <div>Loading flashcards...</div>;
@@ -72,7 +90,7 @@ function PracticePage() {
         <div className="text-center max-w-md">
           <h2 className="text-2xl mb-4">Flashcard Practice</h2>
           <p className="mb-2">You have {flashcards.length} flashcards to practice</p>
-          <p className="mb-4">You have {flashcards.filter(card => card.point < 5).length} flashcards which score is less than 5</p>
+          <p className="mb-4">You have {flashcards.length} flashcards which score is less than 5</p>
           <button 
             onClick={startPractice}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
@@ -88,16 +106,27 @@ function PracticePage() {
                 Card {currentCardIndex + 1} of {flashcards.length}
               </div>
               
-              <FlashcardItem 
-                flashcard={flashcards[currentCardIndex]} 
-                onRateCard={handleRateCard}
-                isRated={isCurrentCardRated}
-              />
+              {/* Card container with transition effect */}
+              <div 
+                style={{
+                  opacity: isTransitioning ? 0 : 1,
+                  transition: 'opacity 300ms ease-in-out',
+                }}
+              >
+                {/* Key forces complete remount when changed */}
+                <FlashcardItem 
+                  key={cardKey}
+                  flashcard={flashcards[currentCardIndex]} 
+                  onRateCard={handleRateCard}
+                  isRated={isCurrentCardRated}
+                />
+              </div>
               
               {showNextButton && (
                 <button
                   onClick={handleNextCard}
                   className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded"
+                  disabled={isTransitioning}
                 >
                   Next
                 </button>
