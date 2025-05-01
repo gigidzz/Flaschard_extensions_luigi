@@ -6,6 +6,7 @@ import cors from "cors";
 import { supabase } from "./utils/supabase";
 import { Flashcard } from "./logic/flashcard";
 import { ApiResponse, CreateFlashcardRequest } from "./types/req-res-types";
+import { DifficultyLevel } from './types/enum-types';
 
 
 /**
@@ -167,7 +168,7 @@ app.post('/api/flashcards', async (
 /**
  * Delete a flashcard by its ID
  * 
- * @route DELETE /api/flashcards/:id
+ * @route DELETE /api/flashcard/:id
  * @param {string} req.params.id - The ID of the flashcard to delete
  * @returns {Promise<ApiResponse<void>>} Success message with no data
  * @throws {Error} If database connection fails or delete operation fails
@@ -175,7 +176,7 @@ app.post('/api/flashcards', async (
  * @spec.requires The ID parameter must correspond to an existing flashcard
  * @spec.ensures The specified flashcard is removed from the database if it exists
  */
-app.delete('/api/flashcards/:id', async (
+app.delete('/api/flashcard/:id', async (
   req: Request<{ id: string }>, 
   res: Response<ApiResponse<void>>
 ) => {
@@ -203,6 +204,47 @@ app.delete('/api/flashcards/:id', async (
   }
 });
 
+
+/**
+ * get a flashcard by its ID
+ * 
+ * @route GET /api/flashcard/:id
+ * @param {string} req.params.id - The ID of the flashcard to get
+ * @returns {Promise<ApiResponse<void>>} Success message with data of flashcard
+ * @throws {Error} If database connection fails or get operation fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.requires The ID parameter must correspond to an existing flashcard
+ * @spec.ensures The specified flashcard is fetched from the database if it exists
+ */
+app.get('/api/flashcard/:id', async (
+  req: Request<{ id: string }>, 
+  res: Response<ApiResponse<void>>
+) => {
+  try {
+    //Extract ID from URL parameters
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('flashcards')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    
+    //Send success response
+    res.status(200).json({ 
+      success: true,
+      data:data,
+      message: 'Flashcard fetched successfully' 
+    });
+  } catch (error: any) {
+    //Handle and log errors
+    console.error('Error fetching flashcard:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch flashcard' });
+  }
+});
+
 /**
  * Fetch flashcards with points less than 5
  * 
@@ -223,7 +265,6 @@ app.get('/api/flashcards/practice', async (req: Request, res: Response<ApiRespon
       .from('flashcards')
       .select('*')
       .lt('point', pointThreshold)  // Filter for points less than 5
-      .not('point', 'is', null); // Exclude cards with null points
       
     if (error) throw error;
     
@@ -255,6 +296,84 @@ app.get('/api/flashcards/practice', async (req: Request, res: Response<ApiRespon
     });
   }
 });
+
+
+
+/**
+ * Update flashcard difficulty level and points
+ * 
+ * @route PATCH /api/flashcards/update-difficulty
+ * @param {number} id - The ID of the flashcard to update
+ * @param {DifficultyLevel} difficulty_level - The new difficulty level ('easy', 'hard', or 'wrong')
+ * @returns {ApiResponse<Flashcard>} The updated flashcard object
+ * @throws {Error} If database connection fails, query execution fails, or invalid parameters provided
+ * @spec.requires Valid flashcard ID and difficulty level must be provided in request body
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.ensures Points are updated based on the difficulty level (easy: +2, hard: +1, wrong: +0)
+ * @spec.ensures The flashcard's difficulty_level field is updated to match the provided level
+ * @spec.ensures Returns the complete updated flashcard object on success
+ */
+app.patch(
+  '/api/flashcards/update-difficulty',
+  async (
+    req: Request<{}, {}, { id: number; difficulty_level: DifficultyLevel }>,
+    res: Response<ApiResponse<Flashcard>>
+  ) => {
+    const { id, difficulty_level } = req.body;
+
+    const difficultyToPoint: Record<DifficultyLevel, number> = {
+      easy: 2,
+      hard: 1,
+      wrong: 0,
+    };
+
+    if (!id || !(difficulty_level in difficultyToPoint)) {
+       res.status(400).json({
+        success: false,
+        message: 'Invalid request: id and difficulty_level are required',
+      });
+    }
+
+    const { data: existingFlashcard, error: fetchError } = await supabase
+      .from('flashcards')
+      .select('point')
+      .eq('id', id)
+      .single();
+
+    if (fetchError) {
+       res.status(500).json({
+        success: false,
+        error: fetchError.message,
+        message: 'Failed to fetch flashcard in updating',
+      });
+    }
+
+    const pointToAdd = difficultyToPoint[difficulty_level];
+    const currentPoints = existingFlashcard?.point || 0;
+    const newPoints = currentPoints + pointToAdd;
+
+    const { data, error } = await supabase
+      .from('flashcards')
+      .update({ point: newPoints, difficulty_level })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error || !data) {
+       res.status(500).json({
+        success: false,
+        error: error?.message || 'Flashcard not found',
+        message: 'Failed to update flashcard',
+      });
+    }
+
+     res.status(200).json({
+      success: true,
+      data: data,
+      message: 'Flashcard updated successfully',
+    });
+  }
+);
 
 
 /**

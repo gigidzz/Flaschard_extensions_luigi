@@ -5,12 +5,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 //check if we have variable sthat we need
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY) {
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
   throw new Error('Missing Supabase environment variables');
 }
 
 //create supabase client with my supabase url and service key
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
