@@ -21,9 +21,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div>
+        <div className='w-full h-full min-h-screen bg-blue-200'>
           <Navbar />
-          <main className='max-w-7xl m-auto'>
+          <main className='max-w-7xl mx-auto mt-14'>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/practice" element={<PracticePage />} />
