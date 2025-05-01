@@ -1,3 +1,5 @@
+import { DifficultyLevel } from "./enum-types";
+
 //to create flashcards i need this attributes
 export interface CreateFlashcardRequest {
     front: string;
@@ -18,3 +20,9 @@ export interface CreateFlashcardRequest {
     error?: string;
     message?: string;
   }
+
+  export interface UpdateDifficultyRequest {
+    id: number;
+    difficulty_level: DifficultyLevel;
+  }
+  

@@ -1,11 +1,12 @@
 import * as dotenv from 'dotenv';
 dotenv.config({path: '.env.test'});
 
+import { RequestHandler } from 'express';
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { supabase } from "./utils/supabase";
 import { Flashcard } from "./logic/flashcard";
-import { ApiResponse, CreateFlashcardRequest } from "./types/req-res-types";
+import { ApiResponse, CreateFlashcardRequest, UpdateDifficultyRequest } from "./types/req-res-types";
 import { DifficultyLevel } from './types/enum-types';
 
 
@@ -300,81 +301,97 @@ app.get('/api/flashcards/practice', async (req: Request, res: Response<ApiRespon
 
 
 /**
- * Update flashcard difficulty level and points
- * 
+ * Update the difficulty level and points of a flashcard.
+ *
  * @route PATCH /api/flashcards/update-difficulty
- * @param {number} id - The ID of the flashcard to update
- * @param {DifficultyLevel} difficulty_level - The new difficulty level ('easy', 'hard', or 'wrong')
- * @returns {ApiResponse<Flashcard>} The updated flashcard object
- * @throws {Error} If database connection fails, query execution fails, or invalid parameters provided
- * @spec.requires Valid flashcard ID and difficulty level must be provided in request body
- * @spec.requires The server must be running and connected to Supabase with valid environment variables
- * @spec.ensures Points are updated based on the difficulty level (easy: +2, hard: +1, wrong: +0)
- * @spec.ensures The flashcard's difficulty_level field is updated to match the provided level
- * @spec.ensures Returns the complete updated flashcard object on success
+ * @param {number} id - The ID of the flashcard to update (from request body)
+ * @param {'easy' | 'hard' | 'wrong'} difficulty_level - The new difficulty level
+ * @returns {ApiResponse<Flashcard>} - The updated flashcard object
+ *
+ * @spec.requires Request body must contain valid `id` and a `difficulty_level` string
+ * @spec.requires Supabase must be running and properly configured with env variables
+ * @spec.ensures If difficulty_level is 'easy', adds 2 points; 'hard' adds 1 point; 'wrong' resets to 0
+ * @spec.ensures Flashcard's `difficulty_level` and `point` fields are updated accordingly
+ * @spec.ensures Returns updated flashcard on success, with HTTP 200
+ * @spec.raises 400 if request is invalid; 500 if database query fails or flashcard not found
  */
-app.patch(
-  '/api/flashcards/update-difficulty',
-  async (
-    req: Request<{}, {}, { id: number; difficulty_level: DifficultyLevel }>,
-    res: Response<ApiResponse<Flashcard>>
-  ) => {
-    const { id, difficulty_level } = req.body;
 
-    const difficultyToPoint: Record<DifficultyLevel, number> = {
+const updateFlashcardDifficulty: RequestHandler = async (req, res, next) => {
+  try {
+    const { id, difficulty_level } = req.body as UpdateDifficultyRequest;
+    
+    const difficultyToPoint = {
       easy: 2,
       hard: 1,
       wrong: 0,
     };
-
+    
     if (!id || !(difficulty_level in difficultyToPoint)) {
-       res.status(400).json({
+      res.status(400).json({
         success: false,
         message: 'Invalid request: id and difficulty_level are required',
       });
+      return; 
     }
-
+    
     const { data: existingFlashcard, error: fetchError } = await supabase
       .from('flashcards')
       .select('point')
       .eq('id', id)
       .single();
-
+    
     if (fetchError) {
-       res.status(500).json({
+      res.status(500).json({
         success: false,
         error: fetchError.message,
         message: 'Failed to fetch flashcard in updating',
       });
+      return;
     }
-
-    const pointToAdd = difficultyToPoint[difficulty_level];
-    const currentPoints = existingFlashcard?.point || 0;
-    const newPoints = currentPoints + pointToAdd;
-
+    
+    // Handle points calculation
+    let newPoints: number;
+    
+    if (difficulty_level === 'wrong') {
+      newPoints = 0;
+    } else {
+      // Get current points or default to 0
+      const currentPoints = existingFlashcard?.point || 0;
+      newPoints = currentPoints + difficultyToPoint[difficulty_level];
+    }
+        
     const { data, error } = await supabase
       .from('flashcards')
       .update({ point: newPoints, difficulty_level })
       .eq('id', id)
       .select()
       .single();
-
+    
     if (error || !data) {
-       res.status(500).json({
+      res.status(500).json({
         success: false,
         error: error?.message || 'Flashcard not found',
         message: 'Failed to update flashcard',
       });
+      return;
     }
-
-     res.status(200).json({
+     
+    res.status(200).json({
       success: true,
       data: data,
       message: 'Flashcard updated successfully',
     });
+  } catch (err) {
+    console.error('Error updating flashcard:', err);
+    res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+      message: 'Internal server error',
+    });
   }
-);
+};
 
+app.patch('/api/flashcards/update-difficulty', updateFlashcardDifficulty);
 
 /**
  * Start the Express server if this file is run directly

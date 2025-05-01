@@ -131,7 +131,6 @@ describe('Flashcard API', () => {
     it('should fetch flashcards with points less than 5', async () => {
       const res = await request(app).get('/api/flashcards/practice');
       
-      console.log(res, 'restoranis')
       expect(res.status).to.equal(200);
       expect(res.body.success).to.be.true;
       expect(res.body.data).to.be.an('array');
@@ -233,40 +232,57 @@ describe('PATCH /api/flashcards/update-difficulty', () => {
 
   /**
    * @spec.requires A valid flashcard must exist before updating.
-   * @spec.ensures The wrong difficulty doesn't add any points to the flashcard.
+   * @spec.ensures The wrong difficulty resets points to the flashcard.
    */
-  it('should update flashcard to wrong difficulty and add 0 points', async () => {
-    // First create a flashcard to update
-    const createRes = await request(app)
-      .post('/api/flashcards')
-      .send({
-        front: 'What is Express?',
-        back: 'A web application framework for Node.js',
-        hint: 'Popular backend framework',
-        tags: ['programming', 'backend']
-      });
-
-    expect(createRes.status).to.equal(201);
-    expect(createRes.body.success).to.be.true;
-
-    const createdId = createRes.body.data.id;
-    
-    // Get the initial state to verify the points correctly
-    const initialGet = await request(app).get(`/api/flashcard/${createdId}`);
-    const initialPoints = initialGet.body.data.point || 0;
-
-    // Update the flashcard difficulty to 'wrong' (should add 0 points)
-    const updateRes = await request(app)
-      .patch('/api/flashcards/update-difficulty')
-      .send({
-        id: createdId,
-        difficulty_level: 'wrong'
-      });
-
-    expect(updateRes.status).to.equal(200);
-    expect(updateRes.body.success).to.be.true;
-    expect(updateRes.body.data.difficulty_level).to.equal('wrong');
-    expect(updateRes.body.data.point).to.equal(initialPoints); // Points remain the same
+  it('should update flashcard to wrong difficulty and reset points to 0', async () => {
+    try {
+      // First create a flashcard to update
+      const createRes = await request(app)
+        .post('/api/flashcards')
+        .send({
+          front: 'What is Express?',
+          back: 'A web application framework for Node.js',
+          hint: 'Popular backend framework',
+          tags: ['programming', 'backend']
+        });
+      
+      expect(createRes.status).to.equal(201);
+      expect(createRes.body.success).to.be.true;
+      
+      const createdId = createRes.body.data.id;
+      console.log('Created flashcard with ID:', createdId);
+          
+      // First let's add some points to the card (by marking it as easy)
+      const easyRes = await request(app)
+        .patch('/api/flashcards/update-difficulty')
+        .send({
+          id: createdId,
+          difficulty_level: 'easy'
+        });
+      
+      
+      expect(easyRes.status).to.equal(200);
+      expect(easyRes.body.success).to.be.true;
+      expect(easyRes.body.data.point).to.equal(2); // Directly verify from the update response
+          
+      // Now update the flashcard difficulty to 'wrong' (should reset points to 0)
+      const updateRes = await request(app)
+        .patch('/api/flashcards/update-difficulty')
+        .send({
+          id: createdId,
+          difficulty_level: 'wrong'
+        });
+      
+      
+      expect(updateRes.status).to.equal(200);
+      expect(updateRes.body.success).to.be.true;
+      expect(updateRes.body.data).to.not.be.undefined;
+      expect(updateRes.body.data.difficulty_level).to.equal('wrong');
+      expect(updateRes.body.data.point).to.equal(0); // Points should be reset to 0
+    } catch (error) {
+      console.error('Test error:', error);
+      throw error;
+    }
   });
 
   /**
