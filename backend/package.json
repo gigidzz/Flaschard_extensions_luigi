@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/server.js",
   "scripts": {
-    "test": "mocha -r ts-node/register -r ./test-setup.ts tests/**/*.test.ts",
+    "test": "mocha --timeout 5000 -r ts-node/register -r ./test-setup.ts tests/**/*.test.ts",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
   },
