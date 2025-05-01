@@ -16,18 +16,10 @@ const FlashcardList: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: 'red' }}>
+      <div>
         <p>Error loading flashcards</p>
         <button 
           onClick={() => refetch()}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#4a6fa5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
         >
           Try Again
         </button>
@@ -37,42 +29,18 @@ const FlashcardList: React.FC = () => {
 
   if (flashcards.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
+      <div>
         <p>No flashcards found</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2>Flashcards</h2>
-        <button 
-          onClick={() => refetch()}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#4a6fa5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Refresh
-        </button>
-      </div>
-      <div 
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-        }}
-      >
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mt-12'>
         {flashcards.map((flashcard: Flashcard) => (
           <FlashcardItem key={flashcard.id} flashcard={flashcard} />
         ))}
       </div>
-    </div>
   );
 };
 
