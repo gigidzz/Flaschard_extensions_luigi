@@ -7,7 +7,8 @@ import {
   getFlashcardById,
   getFlashcardsForPractice,
   updateFlashcardDifficulty,
-  getMasteredFlashcards
+  getMasteredFlashcards,
+  resetFlashcardPoints
 } from '../controllers/flashcards.controller';
 
 const router = Router();
@@ -60,6 +61,12 @@ router.all('/api/flashcard/:id', (req, res, next) => {
 router.get('/mastered', getMasteredFlashcards);
 
 /**
+ * @route PUT /api/flashcards/:id/reset
+ * @description changes flashcard's points to 0
+ */
+router.put('/:id/reset', resetFlashcardPoints);
+
+/**
  * @route GET /api/flashcards/:id
  * @description Get a flashcard by ID
  */
@@ -71,8 +78,11 @@ router.get('/:id', getFlashcardById);
  */
 router.patch('/update-difficulty', updateFlashcardDifficulty);
 
-
-
+/**
+ * @route PATCH /api/flashcards/:id/reset-points
+ * @description Reset a flashcard's points to 0
+ */
+router.patch('/:id/reset-points', resetFlashcardPoints);
 
 
 export default router;

@@ -410,3 +410,68 @@ export const getMasteredFlashcards: RequestHandler = async (req, res) => {
       });
     }
   };
+/**
+ * Reset a flashcard's points to 0
+ * 
+ * @route PATCH /api/flashcards/:id/reset-points
+ * @param {string} req.params.id - The ID of the flashcard to reset
+ * @returns {ApiResponse<Flashcard>} Updated flashcard with points reset to 0
+ * @throws {Error} If database connection fails or update operation fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.requires The ID parameter must correspond to an existing flashcard
+ * @spec.ensures The specified flashcard's points are reset to 0
+ */
+export const resetFlashcardPoints: RequestHandler = async (req, res) => {
+    try {
+      // Extract ID from URL parameters
+      const { id } = req.params;
+      
+      // Check if flashcard exists
+      const { data: existingFlashcard, error: fetchError } = await supabase
+        .from('flashcards')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError) {
+        res.status(404).json({
+          success: false,
+          error: fetchError.message,
+          message: 'Flashcard not found'
+        });
+        return;
+      }
+      
+      // Reset points to 0
+      const { data, error } = await supabase
+        .from('flashcards')
+        .update({ point: 0 })
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error || !data) {
+        res.status(500).json({
+          success: false,
+          error: error?.message || 'Flashcard not found',
+          message: 'Failed to reset flashcard points'
+        });
+        return;
+      }
+      
+      // Send success response
+      res.status(200).json({
+        success: true,
+        data: data,
+        message: 'Flashcard points reset to 0 successfully'
+      });
+    } catch (error: any) {
+      // Handle and log errors
+      console.error('Error resetting flashcard points:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to reset flashcard points',
+        message: error.message || 'An unexpected error occurred'
+      });
+    }
+  };

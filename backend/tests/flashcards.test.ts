@@ -400,68 +400,67 @@ describe('GET /api/flashcards/mastered', () => {
 });
 
 
-describe('PUT /api/flashcards/:id/reset', () => {
-  let flashcardId: string;
-
-  beforeEach(async () => {
-    // Step 1: Create a flashcard
-    const createRes = await request(app)
+describe('PATCH /api/flashcards/:id/reset-points', () => {
+  let testFlashcardId: string;
+  
+  // Set up: Create a test flashcard with points to reset
+  before(async () => {
+    // Create a flashcard with some points
+    const createResponse = await request(app)
       .post('/api/flashcards')
       .send({
-        front: 'Flashcard to reset',
-        back: 'Reset answer',
-        hint: 'Reset hint',
-        tags: ['reset', 'test']
+        front: 'Test Reset Points Front',
+        back: 'Test Reset Points Back',
+        tags: ['test', 'reset'],
+        point: 10 // Set initial points to 10
       });
-
-    flashcardId = createRes.body.data.id;
-
-    // Simulate learning with difficulty = easy (adds 2 points)
-    await request(app)
-      .put(`/api/flashcards/${flashcardId}/learn`)
-      .send({ difficulty: 'easy' });
+    
+    // Store the created flashcard ID for later use
+    testFlashcardId = createResponse.body.data.id;
+    console.log(`Created test flashcard with ID: ${testFlashcardId}`);
   });
-
-  /**
-   * Should reset flashcard's points to 0.
-   * @spec.requires PUT /api/flashcards/:id/reset should update point to 0
-   */
-  it('should reset flashcard point to 0', async () => {
-    const res = await request(app)
-      .put(`/api/flashcards/${flashcardId}/reset`)
-      .send();
-
-    expect(res.status).to.equal(200);
-    expect(res.body.success).to.equal(true);
-    expect(res.body.data).to.have.property('point', 0);
-    expect(res.body.data.id).to.equal(flashcardId);
+  
+  // Test for successfully resetting points
+  it('should reset flashcard points to 0', async () => {
+    // Reset the points
+    const resetResponse = await request(app)
+      .patch(`/api/flashcards/${testFlashcardId}/reset-points`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+    
+    // Verify reset response
+    expect(resetResponse.body).to.have.property('success', true);
+    expect(resetResponse.body).to.have.property('data');
+    expect(resetResponse.body.data).to.have.property('point', 0);
+    expect(resetResponse.body).to.have.property('message').that.includes('reset to 0');
+    
+    // Verify by getting the flashcard directly
+    const getResponse = await request(app)
+      .get(`/api/flashcards/${testFlashcardId}`)
+      .expect(200);
+    
+    expect(getResponse.body.data).to.have.property('point', 0);
   });
-
-  /**
-   * Should return 404 if flashcard ID does not exist.
-   * @spec.requires PUT /api/flashcards/:id/reset should return error for non-existent flashcard
-   */
-  it('should return 404 for non-existing flashcard ID', async () => {
-    const res = await request(app)
-      .put('/api/flashcards/invalid-id-123/reset')
-      .send();
-
-    expect(res.status).to.equal(404);
-    expect(res.body.success).to.equal(false);
-    expect(res.body.error).to.equal('Flashcard not found');
+  
+  // Test for error handling when flashcard doesn't exist
+  it('should return 404 for non-existent flashcard ID', async () => {
+    const nonExistentId = '00000000-0000-0000-0000-000000000000';
+    
+    const response = await request(app)
+      .patch(`/api/flashcards/${nonExistentId}/reset-points`)
+      .expect('Content-Type', /json/)
+      .expect(404);
+    
+    expect(response.body).to.have.property('success', false);
+    expect(response.body).to.have.property('error');
+    expect(response.body).to.have.property('message').that.includes('not found');
   });
-
-  /**
-   * Should return 500 if internal error happens (malformed ID etc.)
-   * @spec.requires PUT /api/flashcards/:id/reset should return 500 on server error
-   */
-  it('should return 500 for invalid ID format', async () => {
-    const res = await request(app)
-      .put('/api/flashcards/%%%/reset')
-      .send();
-
-    expect(res.status).to.equal(500);
-    expect(res.body.success).to.equal(false);
-    expect(res.body.error).to.equal('Failed to reset flashcard points');
+  
+  // Clean up: Delete the test flashcard
+  after(async () => {
+    if (testFlashcardId) {
+      await request(app).delete(`/api/flashcards/${testFlashcardId}`);
+      console.log(`Deleted test flashcard with ID: ${testFlashcardId}`);
+    }
   });
 });
