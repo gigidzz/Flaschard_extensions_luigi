@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Flashcard } from '../types/flashcard';
+import RatingConfirmation from './practicePageComponents/RatingConfirmation';
 
 interface FlashcardItemProps {
   flashcard: Flashcard;
@@ -17,6 +18,7 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [isRating, setIsRating] = useState(false);
+  const [pendingRating, setPendingRating] = useState<'wrong' | 'hard' | 'easy' | null>(null);
 
   const flipCard = () => {
     const newFlipState = !isFlipped;
@@ -33,7 +35,7 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
     setShowHint(!showHint);
   };
 
-  const handleRating = (rating: 'wrong' | 'hard' | 'easy') => async (e: React.MouseEvent) => {
+  const handleRatingSelection = (rating: 'wrong' | 'hard' | 'easy') => (e: React.MouseEvent) => {
     e.stopPropagation();
     
     if (!isFlipped) {
@@ -41,19 +43,29 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
       return;
     }
     
+    setPendingRating(rating);
+  };
+  
+  const confirmRating = async () => {
+    if (!pendingRating) return;
+    
     setIsRating(true);
     try {
       if (onRateCard) {
-        await onRateCard(rating);
+        await onRateCard(pendingRating);
       }
     } catch (error) {
       console.error("Error rating card:", error);
     } finally {
       setIsRating(false);
+      setPendingRating(null);
     }
   };
+  
+  const cancelRating = () => {
+    setPendingRating(null);
+  };
 
-  // Rating button styles based on rating type
   const ratingButtonStyles = {
     wrong: "bg-red-500 hover:bg-red-600 active:bg-red-700 text-white",
     hard: "bg-yellow-500 hover:bg-yellow-600 active:bg-yellow-700 text-white",
@@ -69,7 +81,6 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
         <div 
           className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d rounded-xl shadow-lg ${isFlipped ? 'rotate-y-180' : ''}`}
         >
-          {/* Front of card */}
           <div className="absolute w-full h-full backface-hidden flex flex-col justify-center items-center p-6 bg-white rounded-xl border-2 border-blue-100">
             <h3 className="text-xl font-medium text-center text-gray-800">{flashcard.front}</h3>
             
@@ -112,33 +123,42 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
             </div>
           </div>
           
-          {/* Back of card */}
           <div className="absolute w-full h-full backface-hidden rotate-y-180 flex flex-col justify-center items-center p-6 bg-gradient-to-br from-blue-50 to-white rounded-xl border-2 border-blue-200">
             <p className="text-lg text-gray-800 text-center">{flashcard.back}</p>
             
-            {isFlipped && !isRated && !isRating && onRateCard && (
+            {isFlipped && !isRated && !isRating && onRateCard && !pendingRating && (
               <div
                 className="absolute bottom-4 w-full flex justify-center space-x-3 px-4"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
-                  onClick={handleRating('wrong')}
+                  onClick={handleRatingSelection('wrong')}
                   className={`px-4 py-2 rounded-lg shadow-md transition-all duration-200 font-medium ${ratingButtonStyles.wrong}`}
                 >
                   Wrong
                 </button>
                 <button
-                  onClick={handleRating('hard')}
+                  onClick={handleRatingSelection('hard')}
                   className={`px-4 py-2 rounded-lg shadow-md transition-all duration-200 font-medium ${ratingButtonStyles.hard}`}
                 >
                   Hard
                 </button>
                 <button
-                  onClick={handleRating('easy')}
+                  onClick={handleRatingSelection('easy')}
                   className={`px-4 py-2 rounded-lg shadow-md transition-all duration-200 font-medium ${ratingButtonStyles.easy}`}
                 >
                   Easy
                 </button>
+              </div>
+            )}
+            
+            {pendingRating && !isRating && !isRated && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <RatingConfirmation 
+                  selectedRating={pendingRating}
+                  onConfirm={confirmRating}
+                  onCancel={cancelRating}
+                />
               </div>
             )}
             
