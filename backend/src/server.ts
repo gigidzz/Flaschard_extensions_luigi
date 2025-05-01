@@ -18,7 +18,7 @@ const PORT = process.env.PORT;
  * @spec.ensures Only localhost:3001 can access the API with specified methods
  */
 app.use(cors({
-  origin: 'http://localhost:3001', // Allow only this origin
+  origin: process.env.EXCEPTING_URL, // Allow only this origin
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'], // Supported methods
   credentials: true // Allow cookies to be sent
 }));
