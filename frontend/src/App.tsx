@@ -7,7 +7,7 @@ import './App.css';
 import Navbar from './components/NavBar';
 import HomePage from './pages/HomePage';
 import NotFound from './pages/NotFound';
-import PracticePage from './pages/practicePage';
+import PracticePage from './pages/PracticePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
