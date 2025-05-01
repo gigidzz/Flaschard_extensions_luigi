@@ -398,3 +398,70 @@ describe('GET /api/flashcards/mastered', () => {
     }
   });
 });
+
+
+describe('PUT /api/flashcards/:id/reset', () => {
+  let flashcardId: string;
+
+  beforeEach(async () => {
+    // Step 1: Create a flashcard
+    const createRes = await request(app)
+      .post('/api/flashcards')
+      .send({
+        front: 'Flashcard to reset',
+        back: 'Reset answer',
+        hint: 'Reset hint',
+        tags: ['reset', 'test']
+      });
+
+    flashcardId = createRes.body.data.id;
+
+    // Simulate learning with difficulty = easy (adds 2 points)
+    await request(app)
+      .put(`/api/flashcards/${flashcardId}/learn`)
+      .send({ difficulty: 'easy' });
+  });
+
+  /**
+   * Should reset flashcard's points to 0.
+   * @spec.requires PUT /api/flashcards/:id/reset should update point to 0
+   */
+  it('should reset flashcard point to 0', async () => {
+    const res = await request(app)
+      .put(`/api/flashcards/${flashcardId}/reset`)
+      .send();
+
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data).to.have.property('point', 0);
+    expect(res.body.data.id).to.equal(flashcardId);
+  });
+
+  /**
+   * Should return 404 if flashcard ID does not exist.
+   * @spec.requires PUT /api/flashcards/:id/reset should return error for non-existent flashcard
+   */
+  it('should return 404 for non-existing flashcard ID', async () => {
+    const res = await request(app)
+      .put('/api/flashcards/invalid-id-123/reset')
+      .send();
+
+    expect(res.status).to.equal(404);
+    expect(res.body.success).to.equal(false);
+    expect(res.body.error).to.equal('Flashcard not found');
+  });
+
+  /**
+   * Should return 500 if internal error happens (malformed ID etc.)
+   * @spec.requires PUT /api/flashcards/:id/reset should return 500 on server error
+   */
+  it('should return 500 for invalid ID format', async () => {
+    const res = await request(app)
+      .put('/api/flashcards/%%%/reset')
+      .send();
+
+    expect(res.status).to.equal(500);
+    expect(res.body.success).to.equal(false);
+    expect(res.body.error).to.equal('Failed to reset flashcard points');
+  });
+});
