@@ -5,8 +5,7 @@ interface FlashcardItemProps {
   flashcard: Flashcard;
   onRateCard?: (rating: 'wrong' | 'hard' | 'easy') => Promise<boolean>;
   isRated?: boolean;
-  resetFlip?: boolean; // Keeping for backwards compatibility
-  onFlipChange?: (isFlipped: boolean) => void; // Keeping for backwards compatibility
+  onFlipChange?: (isFlipped: boolean) => void;
 }
 
 const FlashcardItem: React.FC<FlashcardItemProps> = ({ 
@@ -24,7 +23,6 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
     setIsFlipped(newFlipState);
     setShowHint(false);
     
-    // Notify parent component of flip state change if callback provided
     if (onFlipChange) {
       onFlipChange(newFlipState);
     }
@@ -37,15 +35,20 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
 
   const handleRating = (rating: 'wrong' | 'hard' | 'easy') => async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (!isFlipped) {
+      console.log("Cannot rate card until it's flipped to show the answer");
+      return;
+    }
+    
     setIsRating(true);
     try {
-      if(onRateCard){
-       await onRateCard(rating);
+      if (onRateCard) {
+        await onRateCard(rating);
       }
-      setIsRating(false);
-      
     } catch (error) {
       console.error("Error rating card:", error);
+    } finally {
       setIsRating(false);
     }
   };
@@ -90,6 +93,7 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
           }}
         >
           <h3>{flashcard.front}</h3>
+          
           {flashcard.hint && (
             <button 
               onClick={toggleHint}
@@ -106,6 +110,7 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
               {showHint ? 'Hide Hint' : 'Show Hint'}
             </button>
           )}
+          
           {showHint && flashcard.hint && (
             <div 
               style={{
@@ -121,6 +126,7 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
               {flashcard.hint}
             </div>
           )}
+          
           {flashcard.tags.length > 0 && (
             <div 
               style={{
@@ -147,7 +153,18 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
               ))}
             </div>
           )}
+          
+          <div style={{ 
+            position: 'absolute',
+            bottom: '10px',
+            left: '10px',
+            fontSize: '0.8rem',
+            color: '#4a6fa5'
+          }}>
+            Click to see answer
+          </div>
         </div>
+        
         <div 
           style={{
             position: 'absolute',
@@ -243,7 +260,7 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({
                 fontWeight: 'bold',
               }}
             >
-              Card rated! Next card will appear after clicking "Next".
+              Card rated! Click "Next" to continue.
             </div>
           )}
         </div>
