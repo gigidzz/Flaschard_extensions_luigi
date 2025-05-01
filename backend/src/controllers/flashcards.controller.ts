@@ -358,3 +358,55 @@ export const updateFlashcardDifficulty: RequestHandler = async (req, res) => {
     });
   }
 };
+
+/**
+ * Fetch flashcards with points greater than or equal to 5
+ * 
+ * @route GET /api/flashcards/mastered
+ * @returns {ApiResponse<Flashcard[]>} Array of flashcard objects with points 5 or higher
+ * @throws {Error} If database connection fails or query execution fails
+ * @spec.requires The server must be running and connected to Supabase with valid environment variables
+ * @spec.ensures Returns only flashcards with points greater than or equal to 5
+ * @spec.ensures Flashcards without points defined will be excluded from results
+ */
+export const getMasteredFlashcards: RequestHandler = async (req, res) => {
+    try {
+      // Define the point threshold
+      const pointThreshold = 5;
+  
+      // Fetch data from Supabase with point filter
+      const { data, error } = await supabase
+        .from('flashcards')
+        .select('*')
+        .gte('point', pointThreshold)  // Filter for points greater than or equal to 5
+        
+      if (error) throw error;
+      
+      // Map Supabase data to Flashcard class instances
+      const flashcards = data.map(card =>
+        new Flashcard(
+          card.front,
+          card.back,
+          card.tags || [],
+          card.hint,
+          card.id,
+          card.point
+        )
+      );
+      
+      // Send the response with status 200 and the fetched flashcards
+      res.status(200).json({ 
+        success: true, 
+        data: flashcards,
+        message: `Retrieved ${flashcards.length} mastered flashcards with points greater than or equal to 5`
+      });
+    } catch (error: any) {
+      // Catch errors and send a 500 error response
+      console.error('Error fetching mastered flashcards:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch mastered flashcards',
+        message: error.message || 'An unexpected error occurred'
+      });
+    }
+  };
