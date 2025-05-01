@@ -8,6 +8,7 @@ import { supabase } from "./utils/supabase";
 import { Flashcard } from "./logic/flashcard";
 import { ApiResponse, CreateFlashcardRequest, UpdateDifficultyRequest } from "./types/req-res-types";
 import { DifficultyLevel } from './types/enum-types';
+import flashcardRoutes from './routes/flashcard.routes';
 
 
 /**
@@ -28,90 +29,92 @@ app.use(cors({
   credentials: true // Allow cookies to be sent
 }));
 app.use(express.json());
+app.use('/api/flashcards', flashcardRoutes);
 
-/**
- * Fetch all flashcards from the database
- * 
- * @route GET /api/flashcards
- * @returns {Promise<ApiResponse<Flashcard[]>>} Array of flashcard objects with success status
- * @throws {Error} If database connection fails or query execution fails
- * @spec.requires The server must be running and connected to Supabase with valid environment variables
- * @spec.ensures Returns all flashcards from the database as Flashcard instances
- */
-app.get('/api/flashcards', async (req: Request, res: Response<ApiResponse<Flashcard[]>>) => {
-  try {
-    // Fetch data from Supabase
-    const { data, error } = await supabase
-      .from('flashcards')
-      .select('*');
+
+// /**
+//  * Fetch all flashcards from the database
+//  * 
+//  * @route GET /api/flashcards
+//  * @returns {Promise<ApiResponse<Flashcard[]>>} Array of flashcard objects with success status
+//  * @throws {Error} If database connection fails or query execution fails
+//  * @spec.requires The server must be running and connected to Supabase with valid environment variables
+//  * @spec.ensures Returns all flashcards from the database as Flashcard instances
+//  */
+// app.get('/api/flashcards', async (req: Request, res: Response<ApiResponse<Flashcard[]>>) => {
+//   try {
+//     // Fetch data from Supabase
+//     const { data, error } = await supabase
+//       .from('flashcards')
+//       .select('*');
     
-    if (error) throw error;
+//     if (error) throw error;
 
-    // Map Supabase data to Flashcard class instances
-    const flashcards = data.map(card => 
-      new Flashcard(
-        card.front, 
-        card.back, 
-        card.tags || [],
-        card.hint, 
-        card.id,
-      )
-    );
+//     // Map Supabase data to Flashcard class instances
+//     const flashcards = data.map(card => 
+//       new Flashcard(
+//         card.front, 
+//         card.back, 
+//         card.tags || [],
+//         card.hint, 
+//         card.id,
+//       )
+//     );
 
-    // Send the response with status 200 and the fetched flashcards
-    res.status(200).json({ success: true, data: flashcards });
-  } catch (error: any) {
-    // Catch errors and send a 500 error response
-    console.error('Error fetching flashcards:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch flashcards' });
-  }
-});
+//     // Send the response with status 200 and the fetched flashcards
+//     res.status(200).json({ success: true, data: flashcards });
+//   } catch (error: any) {
+//     // Catch errors and send a 500 error response
+//     console.error('Error fetching flashcards:', error);
+//     res.status(500).json({ success: false, error: 'Failed to fetch flashcards' });
+//   }
+// });
 
-/**
- * Fetch flashcards filtered by tag
- * 
- * @route GET /api/flashcards/tag/:tag
- * @param {string} req.params.tag - The tag to filter flashcards by
- * @returns {Promise<ApiResponse<Flashcard[]>>} Array of matching flashcard objects with success status
- * @throws {Error} If database connection fails or query execution fails
- * @spec.requires The server must be running and connected to Supabase with valid environment variables
- * @spec.ensures Returns all flashcards that contain the specified tag
- */
-app.get('/api/flashcards/tag/:tag', async (
-  req: Request<{ tag: string }>, 
-  res: Response<ApiResponse<Flashcard[]>>
-) => {
-  try {
-    //Get the tag from URL parameters
-    const tag: string = req.params.tag;
+// /**
+//  * Fetch flashcards filtered by tag
+//  * 
+//  * @route GET /api/flashcards/tag/:tag
+//  * @param {string} req.params.tag - The tag to filter flashcards by
+//  * @returns {Promise<ApiResponse<Flashcard[]>>} Array of matching flashcard objects with success status
+//  * @throws {Error} If database connection fails or query execution fails
+//  * @spec.requires The server must be running and connected to Supabase with valid environment variables
+//  * @spec.ensures Returns all flashcards that contain the specified tag
+//  */
+// app.get('/api/flashcards/tag/:tag', async (
+//   req: Request<{ tag: string }>, 
+//   res: Response<ApiResponse<Flashcard[]>>
+// ) => {
+//   try {
+//     //Get the tag from URL parameters
+//     const tag: string = req.params.tag;
     
-    //Query Supabase for flashcards containing the specified tag
-    const { data, error } = await supabase
-      .from('flashcards')
-      .select('*')
-      .contains('tags', [tag]);
+//     //Query Supabase for flashcards containing the specified tag
+//     const { data, error } = await supabase
+//       .from('flashcards')
+//       .select('*')
+//       .contains('tags', [tag]);
     
-    if (error) throw error;
+//     if (error) throw error;
     
-    //Map database results to Flashcard instances
-    const flashcards = data.map(card => 
-      new Flashcard(
-        card.front, 
-        card.back, 
-        card.tags || [],
-        card.hint,
-        card.id,
-      )
-    );
+//     //Map database results to Flashcard instances
+//     const flashcards = data.map(card => 
+//       new Flashcard(
+//         card.front, 
+//         card.back, 
+//         card.tags || [],
+//         card.hint,
+//         card.id,
+//       )
+//     );
 
-    //Send response
-    res.status(200).json({ success: true, data: flashcards });
-  } catch (error: any) {
-    //Handle and log errors
-    console.error('Error fetching flashcards by tag:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch flashcards by tag' });
-  }
-});
+//     //Send response
+//     res.status(200).json({ success: true, data: flashcards });
+//   } catch (error: any) {
+//     //Handle and log errors
+//     console.error('Error fetching flashcards by tag:', error);
+//     res.status(500).json({ success: false, error: 'Failed to fetch flashcards by tag' });
+//   }
+// });
 
 /**
  * Create a new flashcard in the database
