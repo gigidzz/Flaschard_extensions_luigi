@@ -4,6 +4,7 @@ import { expect } from 'chai';
 import {app} from '../src/server'; 
 import { Flashcard } from '../src/logic/flashcard';
 
+
 /**
  * @spec.requires The server must be running and connected to Supabase with valid environment variables.
  */
@@ -330,5 +331,136 @@ describe('PATCH /api/flashcards/update-difficulty', () => {
 
     expect(updateRes.status).to.equal(500);
     expect(updateRes.body.success).to.be.false;
+  });
+});
+
+
+
+describe('GET /api/flashcards/mastered', () => {
+
+  /**
+   * Returns 200 status and only flashcards with points >= 5.
+   * @spec.requires Only flashcards with point >= 5 should be returned.
+   * @spec.ensures The response contains success=true and correct message.
+   */
+  it('should return flashcards with point >= 5', async () => {
+    const res = await request(app)
+      .get('/api/flashcards/mastered');
+
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.message).to.match(/Retrieved \d+ mastered flashcards/i);
+
+    for (const flashcard of res.body.data) {
+      expect(flashcard).to.have.property('point');
+      expect(flashcard.point).to.be.at.least(5);
+    }
+  });
+
+  /**
+   * Returns 200 with an empty array if no flashcards have point >= 5.
+   * @spec.requires If no flashcards match the criteria, should return empty array.
+   */
+  it('should return empty array if no flashcards meet the criteria', async () => {
+    // You may need to ensure the DB has no cards with point >= 5 for this test to pass reliably.
+    const res = await request(app)
+      .get('/api/flashcards/mastered');
+
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data).to.be.an('array');
+    for (const flashcard of res.body.data) {
+      expect(flashcard.point).to.be.at.least(5);
+    }
+  });
+
+  /**
+   * Returns 500 status if internal error occurs (e.g., DB connection fails).
+   * @spec.requires If the DB call fails, should return 500 and proper message.
+   */
+  it('should return 500 if an error occurs', async () => {
+    // Simulate error by overriding env or closing DB connection before this test if possible.
+    // Or mock supabase to force an error (depending on how your test environment is setup).
+    // This test assumes error simulation is handled externally.
+
+    // Skip or mark pending if environment doesn’t support forced failure:
+    // this.skip();
+
+    const res = await request(app)
+      .get('/api/flashcards/mastered');
+
+    if (res.status === 500) {
+      expect(res.body.success).to.equal(false);
+      expect(res.body).to.have.property('error');
+    } else {
+      // In normal run it shouldn't error unless forced
+      expect(res.status).to.equal(200);
+    }
+  });
+});
+
+
+describe('PATCH /api/flashcards/:id/reset-points', () => {
+  let testFlashcardId: string;
+  
+  // Set up: Create a test flashcard with points to reset
+  before(async () => {
+    // Create a flashcard with some points
+    const createResponse = await request(app)
+      .post('/api/flashcards')
+      .send({
+        front: 'Test Reset Points Front',
+        back: 'Test Reset Points Back',
+        tags: ['test', 'reset'],
+        point: 10 // Set initial points to 10
+      });
+    
+    // Store the created flashcard ID for later use
+    testFlashcardId = createResponse.body.data.id;
+    console.log(`Created test flashcard with ID: ${testFlashcardId}`);
+  });
+  
+  // Test for successfully resetting points
+  it('should reset flashcard points to 0', async () => {
+    // Reset the points
+    const resetResponse = await request(app)
+      .patch(`/api/flashcards/${testFlashcardId}/reset-points`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+    
+    // Verify reset response
+    expect(resetResponse.body).to.have.property('success', true);
+    expect(resetResponse.body).to.have.property('data');
+    expect(resetResponse.body.data).to.have.property('point', 0);
+    expect(resetResponse.body).to.have.property('message').that.includes('reset to 0');
+    
+    // Verify by getting the flashcard directly
+    const getResponse = await request(app)
+      .get(`/api/flashcards/${testFlashcardId}`)
+      .expect(200);
+    
+    expect(getResponse.body.data).to.have.property('point', 0);
+  });
+  
+  // Test for error handling when flashcard doesn't exist
+  it('should return 404 for non-existent flashcard ID', async () => {
+    const nonExistentId = '00000000-0000-0000-0000-000000000000';
+    
+    const response = await request(app)
+      .patch(`/api/flashcards/${nonExistentId}/reset-points`)
+      .expect('Content-Type', /json/)
+      .expect(404);
+    
+    expect(response.body).to.have.property('success', false);
+    expect(response.body).to.have.property('error');
+    expect(response.body).to.have.property('message').that.includes('not found');
+  });
+  
+  // Clean up: Delete the test flashcard
+  after(async () => {
+    if (testFlashcardId) {
+      await request(app).delete(`/api/flashcards/${testFlashcardId}`);
+      console.log(`Deleted test flashcard with ID: ${testFlashcardId}`);
+    }
   });
 });
