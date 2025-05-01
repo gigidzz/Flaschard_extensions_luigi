@@ -7,17 +7,7 @@ import thumbs_up from "../assets/thumbs_up.png";
 import flat_hand from "../assets/flat_hand.png";
 import victory from "../assets/victory.png";
 import * as tf from '@tensorflow/tfjs';
-
-type GestureName = 'thumbs_up' | 'flat_hand' | 'victory';
-
-interface ImageMap {
-  [key: string]: string;
-}
-
-interface GestureRecognitionProps {
-  onGestureDetected: (gesture: 'wrong' | 'hard' | 'easy') => void;
-  isEnabled: boolean;
-}
+import { GestureName, GestureRecognitionProps, ImageMap } from "../types/gesture";
 
 const FlatHandGesture = new fingerpose.GestureDescription("flat_hand");
 

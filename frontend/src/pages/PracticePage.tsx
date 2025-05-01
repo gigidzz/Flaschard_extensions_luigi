@@ -1,8 +1,12 @@
 import { useState, useCallback } from "react";
 import { usePracticeFlashcards } from "../hooks/useFlascards";
-import FlashcardItem from "../components/FlashcardItem";
 import axios from "axios";
-import GestureRecognition from "../components/GestureRecognition";
+import PracticePageSkeleton from "../skeletons/practicePageSkeleton";
+import PracticePageError from "../errorPages/practicePageError";
+import DescShown from "../components/practicePageComponents/DescShown";
+import PracticePageLayout from "../components/practicePageComponents/PracticePageLayout";
+import FlashcardContent from "../components/practicePageComponents/FlashcardContent";
+import FlashcardGestureWrapper from "../components/practicePageComponents/FlashcardGestureWrapper";
 
 function PracticePage() {
   const [descShown, setDescShown] = useState(true);
@@ -11,10 +15,19 @@ function PracticePage() {
   const [isCurrentCardRated, setIsCurrentCardRated] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [cardKey, setCardKey] = useState(0);
-  const { data: flashcards = [], isLoading, error, refetch } = usePracticeFlashcards();
   const [gestureEnabled, setGestureEnabled] = useState(true);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [pendingGestureRating, setPendingGestureRating] = useState<'wrong' | 'hard' | 'easy' | null>(null);
+  
+  // Data fetching
+  const { 
+    data: flashcards = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = usePracticeFlashcards();
 
+  // Handle rating a flashcard
   const handleRateCard = useCallback(async (rating: 'wrong' | 'hard' | 'easy'): Promise<boolean> => {
     if (flashcards.length > 0 && !isCurrentCardRated && isCardFlipped) {
       const currentCard = flashcards[currentCardIndex];
@@ -45,15 +58,31 @@ function PracticePage() {
     return false;
   }, [flashcards, currentCardIndex, isCurrentCardRated, isCardFlipped]);
 
+  // Handle gesture detection
   const handleGestureDetected = useCallback((rating: 'wrong' | 'hard' | 'easy') => {
     console.log(`Gesture detected: ${rating}`);
     if (!isCurrentCardRated && !descShown && isCardFlipped && flashcards.length > 0) {
-      handleRateCard(rating);
+      // Instead of immediately rating, set pending gesture rating
+      setPendingGestureRating(rating);
     } else {
       console.log("Gesture ignored - card not flipped or already rated");
     }
-  }, [handleRateCard, isCurrentCardRated, descShown, flashcards, isCardFlipped]);
+  }, [isCurrentCardRated, descShown, flashcards, isCardFlipped]);
 
+  // Confirm gesture rating
+  const confirmGestureRating = useCallback(async () => {
+    if (pendingGestureRating) {
+      await handleRateCard(pendingGestureRating);
+      setPendingGestureRating(null);
+    }
+  }, [pendingGestureRating, handleRateCard]);
+
+  // Cancel gesture rating
+  const cancelGestureRating = useCallback(() => {
+    setPendingGestureRating(null);
+  }, []);
+
+  // Handle advancing to the next card
   const handleNextCard = useCallback(() => {
     if (currentCardIndex < flashcards.length - 1) {
       setIsTransitioning(true);
@@ -81,6 +110,7 @@ function PracticePage() {
     }
   }, [currentCardIndex, flashcards.length, refetch]);
 
+  // Start practice session
   const startPractice = useCallback(() => {
     setDescShown(false);
     setCurrentCardIndex(0);
@@ -91,118 +121,82 @@ function PracticePage() {
     setCardKey(prevKey => prevKey + 1);
   }, []);
 
+  // Track card flip state
   const handleFlipChange = useCallback((flipped: boolean) => {
     console.log("Card flip state changed:", flipped);
     setIsCardFlipped(flipped);
+    // Clear any pending gesture rating when card is flipped
+    if (!flipped) {
+      setPendingGestureRating(null);
+    }
   }, []);
 
-  if (isLoading) return <div className="flex justify-center items-center h-64">Loading flashcards...</div>;
-  if (error) return <div className="text-red-500 p-4">Error loading flashcards: {error.message}</div>;
-
-  const lowScoreCards = flashcards.length;
+  // Loading and error states
+  if (isLoading) return <PracticePageSkeleton />;
+  if (error) return <PracticePageError error={error} />;
 
   return (
-    <div className="relative flex flex-col items-center p-6">
+    <PracticePageLayout>
       {!descShown && flashcards.length > 0 && (
-        <div className="absolute top-4 right-4 z-10">
-          <GestureRecognition 
-            onGestureDetected={handleGestureDetected}
-            isEnabled={gestureEnabled && !isCurrentCardRated && isCardFlipped}
-          />
-        </div>
+        <FlashcardGestureWrapper
+          onGestureDetected={handleGestureDetected}
+          isEnabled={gestureEnabled && !isCurrentCardRated && isCardFlipped && !pendingGestureRating}
+        />
       )}
       
-      <h1 className="text-4xl md:text-5xl mb-6 text-center">Practice Flashcards</h1>
-      
       {descShown ? (
-        <div className="text-center max-w-md bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-2xl mb-4 text-blue-600">Ready to Practice?</h2>
-          <p className="mb-2">You have <span className="font-bold">{flashcards.length}</span> flashcards to practice</p>
-          <p className="mb-6">Including <span className="font-bold text-yellow-600">{lowScoreCards}</span> flashcards with score less than 5</p>
-          <button 
-            onClick={startPractice}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200"
-            disabled={flashcards.length === 0}
-          >
-            Start Practice
-          </button>
-          
-          {flashcards.length === 0 && (
-            <p className="mt-4 text-gray-500 text-sm">No flashcards available for practice.</p>
-          )}
-        </div>
+        <DescShown 
+          flashcards={flashcards} 
+          startPractice={startPractice}
+        />
       ) : (
         <div className="flex flex-col items-center">
-          {flashcards.length > 0 ? (
-            <>
-              <div className="mb-4 text-gray-600">
-                Card {currentCardIndex + 1} of {flashcards.length}
-              </div>
-              
-              <div 
-                className="w-full max-w-lg"
-                style={{
-                  opacity: isTransitioning ? 0 : 1,
-                  transition: 'opacity 300ms ease-in-out',
-                }}
-              >
-                <FlashcardItem 
-                  key={cardKey}
-                  flashcard={flashcards[currentCardIndex]} 
-                  onRateCard={handleRateCard}
-                  isRated={isCurrentCardRated}
-                  onFlipChange={handleFlipChange}
-                />
-              </div>
-              
-              {showNextButton && (
-                <button
-                  onClick={handleNextCard}
-                  className="mt-6 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-lg transition-colors duration-200"
-                  disabled={isTransitioning}
-                >
-                  Next Card
-                </button>
-              )}
-
-              <div className="mt-8 p-4 bg-gray-100 rounded-lg shadow-sm max-w-md">
-                <h3 className="text-lg font-medium mb-2 text-gray-800">Gesture Controls:</h3>
-                <ul className="space-y-2 pl-2">
-                  <li className="flex items-center">
-                    <span className="mr-2 text-xl">👍</span> 
-                    <span>Thumbs Up = Rate as <span className="font-bold text-green-600">Easy</span></span>
-                  </li>
-                  <li className="flex items-center">
-                    <span className="mr-2 text-xl">✋</span> 
-                    <span>Flat Hand = Rate as <span className="font-bold text-yellow-600">Hard</span></span>
-                  </li>
-                  <li className="flex items-center">
-                    <span className="mr-2 text-xl">✌️</span> 
-                    <span>Victory Sign = Rate as <span className="font-bold text-red-600">Wrong</span></span>
-                  </li>
-                </ul>
-                <p className="mt-4 text-sm text-gray-600">
-                  Hold the gesture for 3 seconds to confirm your rating, or use the buttons below the camera.
+          <FlashcardContent
+            flashcards={flashcards}
+            currentCardIndex={currentCardIndex}
+            isTransitioning={isTransitioning}
+            cardKey={cardKey}
+            handleRateCard={handleRateCard}
+            isCurrentCardRated={isCurrentCardRated}
+            handleFlipChange={handleFlipChange}
+            showNextButton={showNextButton}
+            handleNextCard={handleNextCard}
+            setDescShown={setDescShown}
+          />
+          
+          {pendingGestureRating && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+                <h3 className="text-lg font-medium mb-3 text-gray-800">Confirm Rating</h3>
+                <p className="mb-4 text-gray-600">
+                  You used a gesture to rate this card as:
+                  <span className={`font-bold ml-2 ${
+                    pendingGestureRating === 'wrong' ? 'text-red-600' :
+                    pendingGestureRating === 'hard' ? 'text-yellow-600' : 'text-green-600'
+                  }`}>
+                    {pendingGestureRating.charAt(0).toUpperCase() + pendingGestureRating.slice(1)}
+                  </span>
                 </p>
-                <p className="mt-2 text-sm text-gray-600">
-                  <strong>Note:</strong> Ratings can only be submitted after flipping the card to see the answer.
-                </p>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={cancelGestureRating}
+                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md text-gray-800 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmGestureRating}
+                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+                  >
+                    Confirm
+                  </button>
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="text-center bg-white p-6 rounded-lg shadow-md">
-              <p className="mb-4">No flashcards available for practice.</p>
-              <button
-                onClick={() => setDescShown(true)}
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-200"
-              >
-                Back
-              </button>
             </div>
           )}
         </div>
       )}
-    </div>
+    </PracticePageLayout>
   );
 }
 
