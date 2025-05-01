@@ -30,6 +30,7 @@ export const getAllFlashcards: RequestHandler = async (req, res) => {
         card.tags || [],
         card.hint, 
         card.id,
+        card.point
       )
     );
 
