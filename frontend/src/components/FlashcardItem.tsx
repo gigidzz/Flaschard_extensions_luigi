@@ -5,16 +5,29 @@ interface FlashcardItemProps {
   flashcard: Flashcard;
   onRateCard?: (rating: 'wrong' | 'hard' | 'easy') => Promise<boolean>;
   isRated?: boolean;
+  resetFlip?: boolean; // Keeping for backwards compatibility
+  onFlipChange?: (isFlipped: boolean) => void; // Keeping for backwards compatibility
 }
 
-const FlashcardItem: React.FC<FlashcardItemProps> = ({ flashcard, onRateCard, isRated }) => {
+const FlashcardItem: React.FC<FlashcardItemProps> = ({ 
+  flashcard, 
+  onRateCard, 
+  isRated,
+  onFlipChange 
+}) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [isRating, setIsRating] = useState(false);
 
   const flipCard = () => {
-    setIsFlipped(!isFlipped);
+    const newFlipState = !isFlipped;
+    setIsFlipped(newFlipState);
     setShowHint(false);
+    
+    // Notify parent component of flip state change if callback provided
+    if (onFlipChange) {
+      onFlipChange(newFlipState);
+    }
   };
 
   const toggleHint = (e: React.MouseEvent) => {
@@ -27,13 +40,10 @@ const FlashcardItem: React.FC<FlashcardItemProps> = ({ flashcard, onRateCard, is
     setIsRating(true);
     try {
       if(onRateCard){
-        const success = await onRateCard(rating);
-        if (!success) {
-          setIsRating(false);
-        }
-      }else{
-      setIsRating(false);
+       await onRateCard(rating);
       }
+      setIsRating(false);
+      
     } catch (error) {
       console.error("Error rating card:", error);
       setIsRating(false);
