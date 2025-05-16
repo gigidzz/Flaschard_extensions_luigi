@@ -35,6 +35,7 @@ app.use('/api/flashcards', flashcardRoutes);
 import { deleteFlashcard, getFlashcardById } from './controllers/flashcards.controller';
 app.delete('/api/flashcard/:id', deleteFlashcard);
 app.get('/api/flashcard/:id', getFlashcardById);
+app.get("/", function (req, res) { res.send("Express on Vercel")});  
 
 /**
  * Start the Express server if this file is run directly
